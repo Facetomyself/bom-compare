@@ -1,20 +1,21 @@
-# BOM Compare UI
+# BOM Compare
 
-一个支持跨平台使用的 BOM `.xlsx` 比对工具，支持：
+Windows-oriented BOM `.xlsx` 比对工具，提供图形界面与命令行两种使用方式。
 
-- 选择任意两个 `.xlsx` BOM 文件
-- 自动识别可比对的工作表、表头行和主键列
-- 忽略物料行顺序
-- 只对物料信息做比对
+## 功能特性
+
+- 选择任意两个 `.xlsx` BOM 文件进行比对
+- 自动识别可比对的同名工作表
+- 自动识别常见主键列，如 `组件编码`、`物料编码`、`Part Number`
+- 忽略物料顺序，仅比对物料信息
 - 差异单元格标红
-- 对仅存在于某一侧的物料整行标红
-- 支持图形界面和命令行两种使用方式
-- 支持打包为 Windows 可执行文件
+- 单侧独有物料整行标红
+- 支持 GitHub Actions 自动构建 Windows 可执行文件
 
-## 运行环境
+## 环境要求
 
-- Python 3.10+
-- 推荐使用 `uv`
+- Python 3.10 及以上
+- `uv`
 
 ## 安装
 
@@ -36,124 +37,98 @@ uv venv
 uv pip install -e .
 ```
 
-## 启动图形界面
+## 启动方式
 
-```bash
-cd "/Users/mengma/pythonProject/Bom_compare"
-source ".venv/bin/activate"
-python "compare_bom.py" --gui
-```
-
-如果不带参数直接运行，也会默认打开 GUI：
+### 图形界面
 
 ```bash
 python "compare_bom.py"
 ```
 
-## 命令行使用
+或：
 
-### 自动比对所有可识别的同名工作表
+```bash
+python "compare_bom.py" --gui
+```
+
+### 命令行
 
 ```bash
 python "compare_bom.py" "左侧.xlsx" "右侧.xlsx"
 ```
 
-## GUI 使用说明
+## 图形界面使用说明
 
-1. 选择左侧和右侧的 BOM `.xlsx` 文件
-2. 选择输出目录
-3. 点击“开始比对”
-4. 程序会自动识别可比对的同名工作表，并在输出目录生成两份带标红结果的工作簿
-
-## 比对规则
-
-- 默认把 `组件编码 / 物料编码 / 料号 / Part Number` 等识别为主键列
-- 默认忽略 `序号 / 层次` 这类顺序列
-- 对左右都存在且主键唯一的物料，逐字段比较并标红差异单元格
-- 对只存在于某一侧的物料，整行物料信息标红
-- 如果同一个主键在某个工作表里重复出现，会退化为“按整行签名匹配”，无法精确定位到单个字段时，会整行标红兜底
+1. 选择左侧 BOM 文件
+2. 选择右侧 BOM 文件
+3. 选择输出目录
+4. 点击“开始比对”
+5. 在输出目录获取两份带差异标红的结果文件
 
 ## 输出结果
 
-输出目录里会生成两份文件，例如：
+输出目录默认生成两份结果文件：
 
 - `左侧文件名-差异标红-时间戳.xlsx`
 - `右侧文件名-差异标红-时间戳.xlsx`
 
-## 说明
+## 项目结构
 
-- 当前版本只处理 `.xlsx` 文件
-- GUI 使用的是 Python 自带 `tkinter`，不依赖额外桌面框架
-- 如果 BOM 表头命名特别野，自动识别可能失败，这时建议直接改代码里的识别规则后重新打包
+```text
+.
+├── bom_compare_core.py          # 核心比对逻辑
+├── bom_compare_gui.py           # 图形界面
+├── compare_bom.py               # 程序入口
+├── bom_compare.spec             # PyInstaller 配置
+├── scripts/
+│   ├── build_windows.bat        # Windows CMD 打包脚本
+│   └── build_windows.ps1        # Windows PowerShell 打包脚本
+└── .github/workflows/
+    ├── build-windows.yml        # Windows 构建流程
+    └── release-windows.yml      # Windows Release 发布流程
+```
 
-## Windows 打包
+## Windows 本地打包
 
-### 先说结论
-
-通常**不能指望在 macOS 上直接稳定打出 Windows `.exe`**。
-
-原因很直接：
-
-- `PyInstaller` 打的是**目标操作系统原生可执行文件**
-- Windows `.exe` 需要 Windows 环境下的 bootloader 和依赖收集
-- 在 macOS 上即便你硬折腾 Wine 或别的旁路，稳定性也一般，容易整出“能打包、不能运行”的假成功
-
-最稳的路子就两种：
-
-1. **在 Windows 机器本地打包**
-2. **用 GitHub Actions 的 Windows runner 自动打包**
-
-### 本项目已经准备好的打包文件
-
-- PyInstaller 配置：`bom_compare.spec`
-- PowerShell 打包脚本：`scripts/build_windows.ps1`
-- 批处理打包脚本：`scripts/build_windows.bat`
-- GitHub Actions 工作流：`.github/workflows/build-windows.yml`
-
-### 在 Windows 本地打包
-
-#### PowerShell
+### PowerShell
 
 ```powershell
 cd "你的项目目录\Bom_compare"
 powershell -ExecutionPolicy Bypass -File ".\scripts\build_windows.ps1"
 ```
 
-#### CMD
+### CMD
 
 ```bat
 cd /d "你的项目目录\Bom_compare"
 scripts\build_windows.bat
 ```
 
-打包完成后，产物默认在：
+默认产物路径：
 
 ```text
 dist\BOMCompare.exe
 ```
 
-### 用 GitHub Actions 自动打包
+## GitHub Actions
 
-把项目推到 GitHub 后：
+### 构建
 
-1. 打开仓库的 `Actions`
-2. 运行 `Build Windows Package`
-3. 等待任务完成
-4. 在 artifacts 里下载 `BOMCompare-windows`
+- 工作流：`.github/workflows/build-windows.yml`
+- 用途：在 `main` 或 `master` 分支更新后自动构建 Windows 可执行文件并上传 artifact
 
-### 打包依赖
+### 发布 Release
 
-项目已经在 `pyproject.toml` 里加了：
+- 工作流：`.github/workflows/release-windows.yml`
+- 触发方式：
+  - 推送标签：`v*`
+  - 手动触发：`workflow_dispatch`
+- 发布产物：
+  - `BOMCompare-<version>-windows-x64.exe`
 
-```toml
-[project.optional-dependencies]
-build = ["pyinstaller>=6.15.0"]
-```
+## 开发说明
 
-所以 Windows 环境下直接执行：
-
-```powershell
-uv pip install --python ".venv\Scripts\python.exe" -e ".[build]"
-```
-
-就能把打包依赖一起装上。
+- 当前版本仅处理 `.xlsx` 文件
+- GUI 使用 Python 自带 `tkinter`
+- 默认忽略 `序号`、`层次` 等顺序字段
+- 若需调整自动识别规则，请修改 `bom_compare_core.py`
