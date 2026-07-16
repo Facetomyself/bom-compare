@@ -19,3 +19,23 @@ bom-compare = "compare_bom:main"
 [build-system]
 requires = ["hatchling>=1.27.0"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+only-include = [
+  "compare_bom.py",
+  "bom_compare_core.py",
+  "bom_compare_gui.py",
+  "README.md",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/compare_bom.py",
+  "/bom_compare_core.py",
+  "/bom_compare_gui.py",
+  "/pyproject.toml",
+  "/README.md",
+  "/bom_compare.spec",
+  "/scripts",
+  "/.github/workflows",
+]
