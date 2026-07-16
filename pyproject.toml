@@ -1,0 +1,21 @@
+[project]
+name = "bom-compare-ui"
+version = "0.1.0"
+description = "Cross-platform BOM xlsx compare tool with GUI"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "openpyxl>=3.1.5",
+]
+
+[project.optional-dependencies]
+build = [
+  "pyinstaller>=6.15.0",
+]
+
+[project.scripts]
+bom-compare = "compare_bom:main"
+
+[build-system]
+requires = ["hatchling>=1.27.0"]
+build-backend = "hatchling.build"

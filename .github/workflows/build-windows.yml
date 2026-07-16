@@ -1,0 +1,37 @@
+name: Build Windows Package
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Set up Python
+        run: uv python install 3.11
+
+      - name: Create virtual environment
+        run: uv venv
+
+      - name: Install dependencies
+        run: uv pip install --python ".venv\\Scripts\\python.exe" -e ".[build]"
+
+      - name: Build executable
+        run: .venv\Scripts\python.exe -m PyInstaller .\bom_compare.spec --noconfirm --clean
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BOMCompare-windows
+          path: dist/BOMCompare.exe
