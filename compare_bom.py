@@ -4,7 +4,6 @@ import argparse
 from pathlib import Path
 
 from bom_compare_core import CompareError, ComparisonRequest, compare_workbooks
-from bom_compare_gui import run_app
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -72,6 +71,12 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.gui or (not args.left and not args.right):
+        try:
+            from bom_compare_gui import run_app
+        except ModuleNotFoundError as error:
+            if error.name not in {"tkinter", "_tkinter"}:
+                raise
+            parser.error("GUI 模式需要 Python Tk 支持；传入两份 XLSX 可直接使用 CLI。")
         run_app()
         return
 
