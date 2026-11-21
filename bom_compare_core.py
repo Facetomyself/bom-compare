@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import re
 from collections import Counter, defaultdict
+from contextlib import ExitStack
 from copy import copy
 from dataclasses import dataclass
 from datetime import datetime
+from os import fstat
 from pathlib import Path
 from typing import Iterable
+from uuid import uuid4
 
 from openpyxl import load_workbook
 from openpyxl.styles import Font, PatternFill
@@ -698,9 +701,41 @@ def build_output_paths(
     output_dir: Path,
 ) -> tuple[Path, Path]:
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    left_output_path = output_dir / f"{left_path.stem}-差异标红-{timestamp}.xlsx"
-    right_output_path = output_dir / f"{right_path.stem}-差异标红-{timestamp}.xlsx"
-    return left_output_path, right_output_path
+    run_tag = f"{timestamp}-{uuid4().hex[:12]}"
+    return (
+        output_dir / f"{left_path.stem}-差异标红-{run_tag}-left.xlsx",
+        output_dir / f"{right_path.stem}-差异标红-{run_tag}-right.xlsx",
+    )
+
+
+def save_output_pair(left_workbook, right_workbook, left_path: Path, right_path: Path) -> None:
+    # Both paths are reserved exclusively before writing. Failure removes only files created here.
+    created: list[tuple[Path, int, int]] = []
+    try:
+        with ExitStack() as stack:
+            files = []
+            for target in (left_path, right_path):
+                path = target.parent.resolve(strict=True) / target.name
+                try:
+                    handle = stack.enter_context(path.open("xb"))
+                except FileExistsError as error:
+                    raise CompareError("结果路径已存在，原文件保持原样；请重新运行。") from error
+                inode = fstat(handle.fileno())
+                created.append((path, inode.st_dev, inode.st_ino))
+                files.append(handle)
+            left_workbook.save(files[0])
+            right_workbook.save(files[1])
+    except BaseException:
+        for path, dev, ino in created:
+            try:
+                inode = path.lstat()
+                if (inode.st_dev, inode.st_ino) == (dev, ino) and path.resolve(strict=True) == path:
+                    path.unlink()
+            except FileNotFoundError:
+                pass
+            except OSError as cleanup_error:
+                raise CompareError("比对失败且本次新建的输出清理失败。") from cleanup_error
+        raise
 
 
 def compare_workbooks(request: ComparisonRequest) -> ComparisonResult:
@@ -734,8 +769,7 @@ def compare_workbooks(request: ComparisonRequest) -> ComparisonResult:
             right_path=request.right_path,
             output_dir=request.output_dir,
         )
-        left_workbook.save(left_output_path)
-        right_workbook.save(right_output_path)
+        save_output_pair(left_workbook, right_workbook, left_output_path, right_output_path)
 
         return ComparisonResult(
             left_output_path=left_output_path,

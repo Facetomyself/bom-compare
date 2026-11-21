@@ -69,8 +69,10 @@ python "compare_bom.py" "左侧.xlsx" "右侧.xlsx"
 
 输出目录默认生成两份结果文件：
 
-- `左侧文件名-差异标红-时间戳.xlsx`
-- `右侧文件名-差异标红-时间戳.xlsx`
+- `左侧文件名-差异标红-时间戳-运行标记-left.xlsx`
+- `右侧文件名-差异标红-时间戳-运行标记-right.xlsx`
+
+两份结果共用一次运行的标记。不同目录的同名表或同一秒重复运行会产生独立结果；已存在文件保持原样。CLI 比对只需核心 Python 依赖，Tk 仅在启动 GUI 时载入。
 
 ## 项目结构
 
@@ -125,6 +127,17 @@ dist\BOMCompare.exe
   - 手动触发：`workflow_dispatch`
 - 发布产物：
   - `BOMCompare-<version>-windows-x64.exe`
+
+## 核心与命令行回归
+
+提前下载并核对公开 wheel 后，在隔离环境内按锁安装，再运行测试：
+
+```bash
+python -m pip install --no-index --only-binary=:all: --require-hashes --find-links WHEEL_DIR -r tests/requirements-acceptance.lock
+python -m unittest discover -s tests -v
+```
+
+用例覆盖无 Tk 的 CLI、两个同名工作簿、同一秒重复执行、目标已存在及第二份写入失败。Windows GUI 和 EXE 另行验收。
 
 ## 开发说明
 
